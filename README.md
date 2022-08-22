@@ -3,3 +3,4 @@ Collection of my solutions to the [**CSES Problemsheet**](https://cses.fi/proble
 
 ### Sections:
 1. [Introductory Problems](https://github.com/bose-sayan/CSES/tree/master/Introductory_Problems)
+2. [Sorting And Searching](https://github.com/bose-sayan/CSES/tree/master/Sorting_And_Searching)
