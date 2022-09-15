@@ -2,10 +2,6 @@
 
 using namespace std;
 
-void solve() {
-
-}
-
 int main() {
 #ifdef LOCAL
     freopen("in.txt", "r", stdin);
@@ -14,6 +10,6 @@ int main() {
     ios_base::sync_with_stdio(false);
     cin.tie(nullptr);
     cout.tie(nullptr);
-    solve();
+
     return 0;
 }
