@@ -1,14 +1,5 @@
 #include <bits/stdc++.h>
-
 using namespace std;
-
-// Iterative Segment Tree
-
-/*
-    Credits:
-    https://codeforces.com/blog/entry/18051
-    https://codeforces.com/blog/entry/1256
-*/
 
 const int MXN = 2e5 + 10;
 int N; // arr size
@@ -20,7 +11,7 @@ void initialize()
     // ! Put all elements in the leaf nodes: a[i] -> tr[i + n] before building
     for (int i = N - 1; i; i--)
     {
-        tr[i] = min(tr[i << 1], tr[(i << 1) | 1]); // tr[i] = f(tr[2i], tr[2i + 1])
+        tr[i] = (tr[i << 1] + tr[(i << 1) | 1]); // tr[i] = f(tr[2i], tr[2i + 1])
     }
 }
 
@@ -31,24 +22,45 @@ void update(int idx, int val)
     // update parent segments
     for (; idx; idx >>= 1)
     {
-        tr[idx >> 1] = min(tr[idx], tr[idx ^ 1]); // tr[x / 2] = f(tr[x], tr[x +/- 1])
+        tr[idx >> 1] = (tr[idx] + tr[idx ^ 1]); // tr[x / 2] = f(tr[x], tr[x +/- 1])
     }
 }
 
 int query(int l, int r)
 {
-    int res = INT_MAX;
+    int res = 0;
     for (l += N, r += N; l < r; l >>= 1, r >>= 1)
     {
         // if (l & 1) => right child is present, not left.
         // Thus take right child, and move to the right adjacent node.
         // Similar for r
         if (l & 1)
-            res = min(res, tr[l++]);
+            res = (res + tr[l++]);
         if (r & 1)
-            res = min(res, tr[--r]);
+            res = (res + tr[--r]);
     }
     return res;
+}
+
+int findVal(int idx)
+{
+    int lowIdx = idx, hiIdx = N - 1, val = -1;
+    while (lowIdx <= hiIdx)
+    {
+        int mid = (lowIdx + hiIdx) / 2;
+        if (query(lowIdx, mid + 1))
+        {
+            idx = mid;
+            val = tr[mid + N];
+            hiIdx = mid - 1;
+        }
+        else
+        {
+            lowIdx = mid + 1;
+        }
+    }
+    update(idx, 0);
+    return val;
 }
 
 int main()
@@ -58,26 +70,22 @@ int main()
     cin.tie(nullptr);
     cout.tie(nullptr);
 
-    int Q;
-    cin >> N >> Q;
+    cin >> N;
+
     for (int i = N; i < 2 * N; i++)
     {
         cin >> tr[i];
     }
+
     initialize();
-    for (int i = 0, T, A, B; i < Q; i++)
+
+    for (int i = 0, id; i < N; i++)
     {
-        cin >> T >> A >> B;
-        --A;
-        if (T == 1)
-        {
-            update(A, B);
-        }
-        else
-        {
-            cout << query(A, B) << '\n';
-        }
+        cin >> id;
+        cout << findVal(id - 1) << ' ';
     }
+
+    cout << '\n';
 
     return 0;
 }
