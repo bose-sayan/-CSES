@@ -1,73 +1,106 @@
 #include <bits/stdc++.h>
+
 using namespace std;
 
-const int MXN = 2e5 + 10;
-int N; // arr size
-int tr[2 * MXN], val[2 * MXN], a[MXN];
+using ll = long long;
 
-// build the tree
-void initialize() {
-  // ! Put all elements in the leaf nodes: a[i] -> tr[i + n] before building
-  for (int i = N - 1; i; i--) {
-    tr[i] = (tr[i << 1] + tr[(i << 1) | 1]); // tr[i] = f(tr[2i], tr[2i + 1])
-  }
-}
+const ll INF = 1e18;
 
-void fillVal(int src = 1) {
-  static int idx = 0;
-  if (src >= N) {
-    val[src] = a[idx++];
-    return;
-  }
-  fillVal(2 * src);
-  fillVal(2 * src + 1);
-}
+struct Info {
+  ll totalSum, mxSum;
+  ll mxLeftSum;
+  Info() { mxSum = totalSum = mxLeftSum = 0; }
+  Info(ll val) { mxSum = totalSum = mxLeftSum = val; }
+};
 
-void update(int idx, int v) {
-  tr[idx] = v;
-  // update parent segments
-  for (; idx; idx >>= 1) {
-    tr[idx >> 1] = (tr[idx] + tr[idx ^ 1]); // tr[x / 2] = f(tr[x], tr[x +/- 1])
-  }
-}
-
-int findVal(int idx) {
-  int curNode = 1;
-  while (curNode < N) {
-    int lChild = curNode * 2, rChild = curNode * 2 + 1;
-    if (tr[lChild] >= idx) {
-      curNode = lChild;
-    } else {
-      idx -= tr[lChild];
-      curNode = rChild;
+struct SegTree {
+  int lb, rb;
+  Info *data;
+  SegTree *left, *right;
+  SegTree(int l, int r, const vector<int> &A) {
+    lb = l, rb = r;
+    if (l == r) {
+      data = new Info(A[l]);
+      return;
     }
+    int mid = (l + r) / 2;
+    left = new SegTree(l, mid, A);
+    right = new SegTree(mid + 1, r, A);
+    data = combine(left->data, right->data);
   }
-  update(curNode, 0);
-  return val[curNode];
-}
+
+  Info *combine(Info *leftData, Info *rightData) {
+    auto newData = new Info();
+    newData->totalSum = leftData->totalSum + rightData->totalSum;
+    newData->mxLeftSum = max(
+        {leftData->mxLeftSum,
+         leftData->totalSum + max(rightData->mxLeftSum, rightData->totalSum)});
+    newData->mxSum =
+        max({newData->totalSum, leftData->mxSum, newData->mxLeftSum});
+    return newData;
+  }
+
+  void update(int idx, int val) {
+    if (lb == rb) {
+      delete data;
+      data = new Info(val);
+      return;
+    }
+    if (left->rb >= idx) {
+      left->update(idx, val);
+    } else {
+      right->update(idx, val);
+    }
+    data = combine(left->data, right->data);
+  }
+
+  Info *query(int l, int r) {
+    if (lb >= l && rb <= r) {
+      return data;
+    }
+    if (lb > r || rb < l) {
+      return new Info(-INF);
+    }
+    auto leftData = left->query(l, r), rightData = right->query(l, r);
+    if (leftData->totalSum == -INF)
+      return rightData;
+    else if (rightData->totalSum == -INF)
+      return leftData;
+    return combine(leftData, rightData);
+  }
+};
 
 int main() {
+
+#ifdef LOCAL
+  (void)!freopen("in.txt", "r", stdin);
+  (void)!freopen("out.txt", "w", stdout);
+#endif
 
   ios_base::sync_with_stdio(false);
   cin.tie(nullptr);
   cout.tie(nullptr);
 
-  cin >> N;
-
-  for (int i = N; i < 2 * N; i++) {
-    cin >> a[i - N];
-    tr[i] = 1;
+  int N, Q;
+  cin >> N >> Q;
+  vector<int> A(N);
+  for (int i = 0; i < N; i++) {
+    cin >> A[i];
   }
+  auto tr = new SegTree(0, N - 1, A);
 
-  initialize();
-  fillVal();
-
-  for (int i = 0, id; i < N; i++) {
-    cin >> id;
-    cout << findVal(id) << ' ';
+  for (int i = 0, t; i < Q; i++) {
+    cin >> t;
+    if (t == 1) {
+      int k, u;
+      cin >> k >> u;
+      tr->update(k - 1, u);
+    } else {
+      int a, b;
+      cin >> a >> b;
+      cout << max(0ll, tr->query(a - 1, b - 1)->mxSum) << '\n';
+    }
   }
-
-  cout << '\n';
 
   return 0;
 }
