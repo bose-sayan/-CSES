@@ -5,76 +5,81 @@ using namespace std;
 using ll = long long;
 
 /*
-  Some observations:
-  For any node n1 and node n2 for which dis(n1, n2) is max, the possibilities
-  are:
-  -> n2 is a descendant of n1
-    In this case, we can simply use DFS and DP to find the max depth of the
-    subtree rooted at n1
-  -> n2 is not a descendant of n1
-    In this case, we need to find the longest path from parent of n1 to n2
-    Here again we have two possibilities:
-      :- n2 is a descendant of par[n1]
-        In this case, we basically need to find the longest path from par[n1]
-        to any of its descendants. We do need to check that n1 isn't a part of
-        this path.
-      :- n2 is not a descendant of par[n1]
-        This can be thought of as a recurring subtask.
+  We can use the concept of LCA for solving this
+  Let lca = LCA of x and y
+  dis(x, y) = dis(x, lca) + dis(y, lca)
+  dis(lca, x) = depth(x) - depth(lca)
 */
 
-const int MXN = 2e5 + 10;
+const int MXN = 2e5 + 10, H = 25;
+
+int par[MXN][H], depth[MXN], tin[MXN], tout[MXN], timer = 0;
 vector<int> G[MXN];
 
-int mxPathIn[MXN]; // distance of longest path from cur node to another node in
-                   // its subtree
-int secondMxPathIn[MXN]; // distance of second longest path from cur node to
-                         // another node in its subtree
-int mxPathOut[MXN]; // distance of longest path from cur node to another node
-                    // not in its subtree
-int mxPath[MXN];    // distance of longest path from cur node to another node
-int mxPathInChild[MXN]; // node which contributes to mxPathIn[]
-
 void solve() {
-  int n;
-  cin >> n;
-  for (int i = 0, u, v; i < n - 1; i++) {
+  int n, q;
+  cin >> n >> q;
+  for (int i = 1, u, v; i < n; i++) {
     cin >> u >> v;
     G[u].emplace_back(v);
     G[v].emplace_back(u);
   }
-  function<void(int, int)> calcMxPathIn = [&](int src, int par) {
-    for (auto &des : G[src]) {
-      if (des == par)
+
+  // initialize
+
+  function<void(int, int)> calcDepth = [&](int src, int p) {
+    tin[src] = ++timer;
+    if (src != p)
+      depth[src] = depth[p] + 1;
+    par[src][0] = p;
+    for (int h = 1; h < H; h++) {
+      par[src][h] = par[par[src][h - 1]][h - 1];
+    }
+    for (int &des : G[src]) {
+      if (des == p)
         continue;
-      calcMxPathIn(des, src);
-      if (mxPathIn[des] + 1 >= mxPathIn[src]) {
-        secondMxPathIn[src] = mxPathIn[src];
-        mxPathIn[src] = mxPathIn[des] + 1;
-        mxPathInChild[src] = des;
-        mxPath[src] = mxPathIn[src];
-      } else if (mxPathIn[des] + 1 >= secondMxPathIn[src]) {
-        secondMxPathIn[src] = mxPathIn[des] + 1;
+      calcDepth(des, src);
+    }
+    tout[src] = ++timer;
+  };
+
+  calcDepth(1, 1);
+
+  function<bool(int, int)> isAncestor = [&](int x, int y) -> bool {
+    return (tin[x] <= tin[y]) && (tout[y] <= tout[x]);
+  };
+
+  function<int(int, int)> getAncestor = [&](int x, int jumps) -> int {
+    int idx = 0;
+    while (jumps) {
+      if (jumps & 1) {
+        x = par[x][idx];
       }
+      jumps >>= 1;
+      idx++;
     }
+    return x;
   };
-  calcMxPathIn(1, -1);
-  function<void(int, int)> calcMxPathOut = [&](int src, int par) {
-    if (par != -1)
-      mxPathOut[src] = max(mxPathOut[par] + 1,
-                           (mxPathInChild[par] == src ? secondMxPathIn[par] + 1
-                                                      : mxPathIn[par] + 1));
-    mxPath[src] = max(mxPath[src], mxPathOut[src]);
-    for (auto &des : G[src]) {
-      if (des == par)
-        continue;
-      calcMxPathOut(des, src);
+
+  function<int(int, int)> findLCA = [&](int x, int y) -> int {
+    // For dealing with the case when one is a descendant of the other
+    if (isAncestor(x, y))
+      return x;
+    if (isAncestor(y, x))
+      return y;
+    for (int i = H - 1; i >= 0; i--) {
+      if (!isAncestor(par[x][i], y))
+        x = par[x][i];
     }
+    return par[x][0];
   };
-  calcMxPathOut(1, -1);
-  for (int i = 1; i <= n; i++) {
-    cout << mxPath[i] << ' ';
+
+  // Resolve Queries
+  for (int i = 0, x, y; i < q; i++) {
+    cin >> x >> y;
+    int lca = findLCA(x, y);
+    cout << (depth[x] - depth[lca]) + (depth[y] - depth[lca]) << '\n';
   }
-  cout << '\n';
 }
 
 int main() {
